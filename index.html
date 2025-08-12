@@ -84,6 +84,23 @@
       window.open(prox, '_blank', 'noopener');
     }
 
+    // Fallback: usa o tradutor "antigo" (translate.google.com/translate?u=...)
+    function openLegacy(){
+      pushTextToUrl();
+      const sl = document.getElementById('sl').value.trim() || 'auto';
+      const tl = document.getElementById('tl').value.trim() || 'pt';
+      const hl = document.getElementById('hl').value.trim() || 'pt-BR';
+      // monta a URL base (esta própria página), 100% absoluta
+      const here = new URL(location.href);
+      // monta o wrapper legacy
+      const legacy = new URL('https://translate.google.com/translate');
+      legacy.searchParams.set('sl', sl);
+      legacy.searchParams.set('tl', tl);
+      legacy.searchParams.set('hl', hl);
+      legacy.searchParams.set('u', here.toString());
+      window.open(legacy.toString(), '_blank', 'noopener');
+    }
+
     async function copyTranslated(){
       pushTextToUrl();
       const prox = toTranslateProxyUrl(location.href);
@@ -119,6 +136,10 @@
         <div class="row">
           <button class="secondary" onclick="pushTextToUrl()">Atualizar URL (salvar conteúdo)</button>
           <button id="openTranslated" onclick="openTranslated()">Abrir traduzido (ai.translate.goog)</button>
+        </div>
+        <div class="row">
+          <button class="secondary" onclick="openLegacy()">⚠️ Fallback: abrir via translate.google.com</button>
+          <span class="muted">Use se o ai.translate.goog der erro/fechar conexão.</span>
         </div>
         <p class="muted">Dica: depois de salvar na URL, você pode compartilhar o link. Ao abrir, o texto carrega e dá pra clicar “Abrir traduzido”.</p>
         <div class="tip">Limitações: o proxy <strong>ai.translate.goog</strong> só funciona se esta página estiver <strong>publicamente acessível em HTTPS</strong> (ex.: GitHub Pages, Netlify). Abrir como <code>file://</code> não funciona. Para textos muito longos, a URL pode ficar grande; prefira hospedar e colar o texto direto no arquivo.</div>
