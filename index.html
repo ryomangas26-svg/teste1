@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Teste: abrir via ai.translate.goog</title>
+  <style>
+    :root { --bg:#0b1020; --panel:#101735; --ink:#e9ecf8; --muted:#9aa3c7; --primary:#7c9cff; }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.4 system-ui,Segoe UI,Roboto,Inter,"Helvetica Neue",Arial}
+    .wrap{max-width:980px;margin:40px auto;padding:24px}
+    .card{background:var(--panel);border:1px solid #1a224a;border-radius:16px;box-shadow:0 8px 30px rgba(0,0,0,.25)}
+    header{padding:20px 24px;border-bottom:1px solid #1a224a}
+    header h1{margin:0;font-size:22px;font-weight:700}
+    header p{margin:6px 0 0;color:var(--muted);font-size:14px}
+    .content{display:grid;grid-template-columns:1fr;gap:16px;padding:20px 24px}
+    @media (min-width:900px){.content{grid-template-columns:1fr 360px}}
+    textarea{width:100%;min-height:260px;border:1px solid #263068;background:#0f1430;color:var(--ink);border-radius:12px;padding:12px 14px;resize:vertical;font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace}
+    .panel{display:grid;gap:12px}
+    label{font-size:13px;color:var(--muted)}
+    input[type=text]{width:100%;border:1px solid #263068;background:#0f1430;color:var(--ink);border-radius:10px;padding:10px 12px}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    button{appearance:none;border:1px solid #2b3aa3;background:linear-gradient(180deg,#4a63ff,#3b53f0);color:white;padding:10px 14px;border-radius:12px;font-weight:600;cursor:pointer}
+    button.secondary{background:#0f1430;border-color:#2a366f;color:#cdd6ff}
+    button:disabled{opacity:.55;cursor:default}
+    .muted{color:var(--muted);font-size:13px}
+    .out{white-space:pre-wrap;background:#0f1430;border:1px dashed #2b366d;border-radius:12px;padding:14px}
+    .tip{font-size:13px;color:#b6c1ff;background:#0f1430;border:1px solid #23306e;border-radius:10px;padding:10px}
+  </style>
+  <script>
+    // Util: ler e escrever a query string
+    const qs = new URLSearchParams(location.search);
+    function getParam(name, def="") { return qs.get(name) ?? def; }
+    function setParam(name, val) { if (val==null || val==="") qs.delete(name); else qs.set(name, val); }
+
+    // Decodifica o texto do parâmetro t (URL-encoded). Evita innerHTML para não executar nada.
+    function currentText(){
+      const raw = getParam('t', '');
+      try { return decodeURIComponent(raw); } catch { return raw; }
+    }
+
+    function updatePreviewFromQuery(){
+      const t = currentText();
+      document.getElementById('text').value = t;
+      document.getElementById('preview').textContent = t || '— sem conteúdo —';
+      document.getElementById('openTranslated').disabled = !t;
+      document.getElementById('copyTranslated').disabled = !t;
+    }
+
+    function pushTextToUrl(){
+      const t = document.getElementById('text').value || '';
+      setParam('t', encodeURIComponent(t));
+      // mantemos também sl/tl/hl na URL para reproduzir depois
+      const sl = document.getElementById('sl').value.trim() || 'auto';
+      const tl = document.getElementById('tl').value.trim() || 'pt';
+      const hl = document.getElementById('hl').value.trim() || 'pt-BR';
+      setParam('_x_tr_sl', sl); setParam('_x_tr_tl', tl); setParam('_x_tr_hl', hl);
+      const url = location.pathname + '?' + qs.toString();
+      history.replaceState(null, '', url);
+      updatePreviewFromQuery();
+    }
+
+    function toTranslateProxyUrl(origUrl){
+      const u = new URL(origUrl, location.href);
+      // transforma dominio: exemplo.com -> exemplo-com.translate.goog
+      const host = u.hostname.replace(/\./g,'-') + '.translate.goog';
+      u.hostname = host;
+      // força https
+      u.protocol = 'https:';
+      // garante os parametros do translate
+      const sl = document.getElementById('sl').value.trim() || getParam('_x_tr_sl', 'auto');
+      const tl = document.getElementById('tl').value.trim() || getParam('_x_tr_tl', 'pt');
+      const hl = document.getElementById('hl').value.trim() || getParam('_x_tr_hl', 'pt-BR');
+      u.searchParams.set('_x_tr_sl', sl);
+      u.searchParams.set('_x_tr_tl', tl);
+      u.searchParams.set('_x_tr_hl', hl);
+      return u.toString();
+    }
+
+    function openTranslated(){
+      // Garante que o texto da caixa esteja na URL antes de abrir
+      pushTextToUrl();
+      const prox = toTranslateProxyUrl(location.href);
+      window.open(prox, '_blank', 'noopener');
+    }
+
+    async function copyTranslated(){
+      pushTextToUrl();
+      const prox = toTranslateProxyUrl(location.href);
+      try { await navigator.clipboard.writeText(prox); toast('Link traduzido copiado!'); }
+      catch { alert(prox); }
+    }
+
+    function toast(msg){
+      const el = document.createElement('div');
+      el.textContent = msg; el.style.cssText = 'position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#0f1430;border:1px solid #2b3aa3;color:#cdd6ff;padding:10px 14px;border-radius:12px;z-index:9999';
+      document.body.appendChild(el); setTimeout(()=>el.remove(), 1500);
+    }
+
+    document.addEventListener('DOMContentLoaded', ()=>{
+      // Preenche sl/tl/hl a partir da URL, se houver
+      document.getElementById('sl').value = getParam('_x_tr_sl','auto');
+      document.getElementById('tl').value = getParam('_x_tr_tl','pt');
+      document.getElementById('hl').value = getParam('_x_tr_hl','pt-BR');
+      updatePreviewFromQuery();
+    });
+  </script>
+</head>
+<body>
+  <div class="wrap card">
+    <header>
+      <h1>Traduzir minha própria página via <code>ai.translate.goog</code></h1>
+      <p>Cola um texto, grava na URL e abre esta mesma página através do proxy do Google Translate.</p>
+    </header>
+    <div class="content">
+      <section>
+        <label for="text">Seu texto</label>
+        <textarea id="text" placeholder="Cole aqui seu texto..."></textarea>
+        <div class="row">
+          <button class="secondary" onclick="pushTextToUrl()">Atualizar URL (salvar conteúdo)</button>
+          <button id="openTranslated" onclick="openTranslated()">Abrir traduzido (ai.translate.goog)</button>
+        </div>
+        <p class="muted">Dica: depois de salvar na URL, você pode compartilhar o link. Ao abrir, o texto carrega e dá pra clicar “Abrir traduzido”.</p>
+        <div class="tip">Limitações: o proxy <strong>ai.translate.goog</strong> só funciona se esta página estiver <strong>publicamente acessível em HTTPS</strong> (ex.: GitHub Pages, Netlify). Abrir como <code>file://</code> não funciona. Para textos muito longos, a URL pode ficar grande; prefira hospedar e colar o texto direto no arquivo.</div>
+      </section>
+      <aside class="panel">
+        <div>
+          <label>Idioma de origem (sl)</label>
+          <input id="sl" type="text" placeholder="auto" value="auto" />
+        </div>
+        <div class="row">
+          <div>
+            <label>Destino (tl)</label>
+            <input id="tl" type="text" placeholder="pt" value="pt" />
+          </div>
+          <div>
+            <label>Idioma da UI (hl)</label>
+            <input id="hl" type="text" placeholder="pt-BR" value="pt-BR" />
+          </div>
+        </div>
+        <button class="secondary" id="copyTranslated" onclick="copyTranslated()">Copiar link traduzido</button>
+        <div>
+          <label>Pré-visualização (não traduzida)</label>
+          <div id="preview" class="out">— sem conteúdo —</div>
+        </div>
+      </aside>
+    </div>
+  </div>
+</body>
+</html>
