@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Teste: abrir via ai.translate.goog</title>
+  <title>Teste: abrir via translate.google.com</title>
   <style>
     :root { --bg:#0b1020; --panel:#101735; --ink:#e9ecf8; --muted:#9aa3c7; --primary:#7c9cff; }
     *{box-sizing:border-box}
@@ -60,51 +60,34 @@
       updatePreviewFromQuery();
     }
 
-    function toTranslateProxyUrl(origUrl){
-      const u = new URL(origUrl, location.href);
-      // transforma dominio: exemplo.com -> exemplo-com.translate.goog
-      const host = u.hostname.replace(/\./g,'-') + '.translate.goog';
-      u.hostname = host;
-      // força https
-      u.protocol = 'https:';
-      // garante os parametros do translate
+    function buildLegacyUrl(){
+      // monta a URL base (esta própria página), absoluta
+      const here = new URL(location.href);
       const sl = document.getElementById('sl').value.trim() || getParam('_x_tr_sl', 'auto');
       const tl = document.getElementById('tl').value.trim() || getParam('_x_tr_tl', 'pt');
       const hl = document.getElementById('hl').value.trim() || getParam('_x_tr_hl', 'pt-BR');
-      u.searchParams.set('_x_tr_sl', sl);
-      u.searchParams.set('_x_tr_tl', tl);
-      u.searchParams.set('_x_tr_hl', hl);
-      return u.toString();
-    }
-
-    function openTranslated(){
-      // Garante que o texto da caixa esteja na URL antes de abrir
-      pushTextToUrl();
-      const prox = toTranslateProxyUrl(location.href);
-      window.open(prox, '_blank', 'noopener');
-    }
-
-    // Fallback: usa o tradutor "antigo" (translate.google.com/translate?u=...)
-    function openLegacy(){
-      pushTextToUrl();
-      const sl = document.getElementById('sl').value.trim() || 'auto';
-      const tl = document.getElementById('tl').value.trim() || 'pt';
-      const hl = document.getElementById('hl').value.trim() || 'pt-BR';
-      // monta a URL base (esta própria página), 100% absoluta
-      const here = new URL(location.href);
-      // monta o wrapper legacy
       const legacy = new URL('https://translate.google.com/translate');
       legacy.searchParams.set('sl', sl);
       legacy.searchParams.set('tl', tl);
       legacy.searchParams.set('hl', hl);
       legacy.searchParams.set('u', here.toString());
-      window.open(legacy.toString(), '_blank', 'noopener');
+      return legacy.toString();
     }
 
+    function openTranslated(){
+      pushTextToUrl();
+      const url = buildLegacyUrl();
+      window.open(url, '_blank', 'noopener');
+    }
+
+    // Fallback: usa o tradutor "antigo" (translate.google.com/translate?u=...)
+    
     async function copyTranslated(){
       pushTextToUrl();
-      const prox = toTranslateProxyUrl(location.href);
-      try { await navigator.clipboard.writeText(prox); toast('Link traduzido copiado!'); }
+      const url = buildLegacyUrl();
+      try { await navigator.clipboard.writeText(url); toast('Link traduzido copiado!'); }
+      catch { alert(url); }
+    }
       catch { alert(prox); }
     }
 
@@ -126,8 +109,8 @@
 <body>
   <div class="wrap card">
     <header>
-      <h1>Traduzir minha própria página via <code>ai.translate.goog</code></h1>
-      <p>Cola um texto, grava na URL e abre esta mesma página através do proxy do Google Translate.</p>
+      <h1>Traduzir minha própria página via <code>translate.google.com</code></h1>
+      <p>Cola um texto, grava na URL e abre esta mesma página através do wrapper do Google Translate (translate.google.com/translate?u=...).</p>
     </header>
     <div class="content">
       <section>
@@ -135,14 +118,11 @@
         <textarea id="text" placeholder="Cole aqui seu texto..."></textarea>
         <div class="row">
           <button class="secondary" onclick="pushTextToUrl()">Atualizar URL (salvar conteúdo)</button>
-          <button id="openTranslated" onclick="openTranslated()">Abrir traduzido (ai.translate.goog)</button>
+          <button id="openTranslated" onclick="openTranslated()">Abrir traduzido (translate.google.com)</button>
         </div>
-        <div class="row">
-          <button class="secondary" onclick="openLegacy()">⚠️ Fallback: abrir via translate.google.com</button>
-          <span class="muted">Use se o ai.translate.goog der erro/fechar conexão.</span>
-        </div>
+        
         <p class="muted">Dica: depois de salvar na URL, você pode compartilhar o link. Ao abrir, o texto carrega e dá pra clicar “Abrir traduzido”.</p>
-        <div class="tip">Limitações: o proxy <strong>ai.translate.goog</strong> só funciona se esta página estiver <strong>publicamente acessível em HTTPS</strong> (ex.: GitHub Pages, Netlify). Abrir como <code>file://</code> não funciona. Para textos muito longos, a URL pode ficar grande; prefira hospedar e colar o texto direto no arquivo.</div>
+        <div class="tip">Esta página usa o wrapper <strong>translate.google.com/translate?u=…</strong>, que não requer assinatura e costuma funcionar em sites públicos (GitHub Pages, Netlify). Abrir como <code>file://</code> não funciona. Para textos muito longos, a URL pode ficar grande — se precisar, hospedamos o texto direto no HTML.</div>
       </section>
       <aside class="panel">
         <div>
